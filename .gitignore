@@ -1,0 +1,15 @@
+.DS_Store
+AGENTS.md
+.env
+.env.*
+!.env.example
+node_modules/
+vendor/
+wp-admin/
+wp-includes/
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backup*/
+wp-config.php
+*.log

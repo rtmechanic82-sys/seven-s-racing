@@ -1,0 +1,8 @@
+{
+  "name": "seven-s-racing",
+  "private": true,
+  "scripts": {
+    "preview": "node scripts/preview.mjs"
+  }
+}
+
