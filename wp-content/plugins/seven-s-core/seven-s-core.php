@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Seven S Core
  * Description: Racing content, sponsor management, and a simplified owner dashboard for Seven S Racing.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Author: Patriot Digital Collective
  */
 
@@ -20,6 +20,8 @@ final class Seven_S_Core {
         add_action('admin_head', [__CLASS__, 'owner_admin_styles']);
         add_filter('manage_seven_s_sponsor_posts_columns', [__CLASS__, 'sponsor_columns']);
         add_action('manage_seven_s_sponsor_posts_custom_column', [__CLASS__, 'sponsor_column_values'], 10, 2);
+        add_filter('manage_seven_s_event_posts_columns', [__CLASS__, 'event_columns']);
+        add_action('manage_seven_s_event_posts_custom_column', [__CLASS__, 'event_column_values'], 10, 2);
     }
 
     public static function activate() {
@@ -81,8 +83,14 @@ final class Seven_S_Core {
     public static function event_box($post) {
         wp_nonce_field('seven_s_save_meta', 'seven_s_nonce');
         self::field($post, '_seven_s_date', 'Date and time', 'datetime-local');
+        self::field($post, '_seven_s_season', 'Season', 'number', 'Example: 2026');
         self::field($post, '_seven_s_location', 'City, State');
+        self::field($post, '_seven_s_track', 'Track name');
         self::field($post, '_seven_s_event_url', 'Event or track URL', 'url');
+        $status = get_post_meta($post->ID, '_seven_s_event_status', true) ?: 'scheduled';
+        echo '<p><label for="_seven_s_event_status"><strong>Race status</strong></label><br><select id="_seven_s_event_status" name="_seven_s_event_status">';
+        foreach (['scheduled' => 'Scheduled', 'completed' => 'Completed', 'cancelled' => 'Cancelled', 'postponed' => 'Postponed'] as $value => $label) echo '<option value="' . esc_attr($value) . '" ' . selected($status, $value, false) . '>' . esc_html($label) . '</option>';
+        echo '</select><br><small>Completed races remain in the season archive but will not appear as the next race.</small></p>';
     }
     public static function result_box($post) {
         wp_nonce_field('seven_s_save_meta', 'seven_s_nonce');
@@ -95,7 +103,7 @@ final class Seven_S_Core {
         if (!isset($_POST['seven_s_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['seven_s_nonce'])), 'seven_s_save_meta')) return;
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
-        $fields = ['_seven_s_url', '_seven_s_level', '_seven_s_order', '_seven_s_date', '_seven_s_location', '_seven_s_event_url', '_seven_s_result_date', '_seven_s_finish', '_seven_s_class'];
+        $fields = ['_seven_s_url', '_seven_s_level', '_seven_s_order', '_seven_s_date', '_seven_s_season', '_seven_s_location', '_seven_s_track', '_seven_s_event_url', '_seven_s_event_status', '_seven_s_result_date', '_seven_s_finish', '_seven_s_class'];
         foreach ($fields as $field) {
             if (!isset($_POST[$field])) continue;
             $value = wp_unslash($_POST[$field]);
@@ -114,7 +122,8 @@ final class Seven_S_Core {
             ['Manage Gallery', 'Edit captions, featured images, categories, or remove a photo.', 'edit.php?post_type=seven_s_gallery', 'dashicons-images-alt2'],
             ['Write a Race Report', 'Create a new update or weekly race recap.', 'post-new.php', 'dashicons-edit-page'],
             ['Manage Race Reports', 'Update drafts and published stories.', 'edit.php', 'dashicons-media-document'],
-            ['Update Next Race', 'Add or change the next track, date, location, and event link.', 'edit.php?post_type=seven_s_event', 'dashicons-calendar-alt'],
+            ['Add a Race', 'Enter the date, track, location, event link, and race status.', 'post-new.php?post_type=seven_s_event', 'dashicons-calendar-alt'],
+            ['Manage Race Schedule', 'Update this season, mark races complete, or start next year’s schedule.', 'edit.php?post_type=seven_s_event', 'dashicons-list-view'],
             ['Manage Sponsors', 'Add primary/local partners, logos, links, and display order.', 'edit.php?post_type=seven_s_sponsor', 'dashicons-heart'],
         ];
         echo '<div class="wrap seven-s-admin"><div class="seven-s-admin__hero"><span class="seven-s-admin__mark">7<sup>S</sup></span><div><h1>Seven S Racing</h1><p>Choose what you want to update.</p></div></div><div class="seven-s-admin__grid">';
@@ -134,6 +143,11 @@ final class Seven_S_Core {
 
     public static function sponsor_columns($columns) { $columns['seven_s_level'] = 'Level'; $columns['seven_s_order'] = 'Order'; return $columns; }
     public static function sponsor_column_values($column, $post_id) { if ($column === 'seven_s_level') echo esc_html(get_post_meta($post_id, '_seven_s_level', true)); if ($column === 'seven_s_order') echo esc_html(get_post_meta($post_id, '_seven_s_order', true)); }
+    public static function event_columns($columns) { return ['cb' => $columns['cb'], 'title' => 'Race / Event', 'seven_s_date' => 'Date', 'seven_s_track' => 'Track', 'seven_s_location' => 'Location', 'seven_s_status' => 'Status', 'date' => 'Published']; }
+    public static function event_column_values($column, $post_id) {
+        $map = ['seven_s_date' => '_seven_s_date', 'seven_s_track' => '_seven_s_track', 'seven_s_location' => '_seven_s_location', 'seven_s_status' => '_seven_s_event_status'];
+        if (isset($map[$column])) echo esc_html(get_post_meta($post_id, $map[$column], true));
+    }
 }
 
 register_activation_hook(__FILE__, ['Seven_S_Core', 'activate']);

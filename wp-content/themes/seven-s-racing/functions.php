@@ -25,3 +25,18 @@ function seven_s_query($type, $count = 4, $meta_key = '', $order = 'DESC') {
     if ($meta_key) { $args['meta_key'] = $meta_key; $args['orderby'] = 'meta_value'; }
     return new WP_Query($args);
 }
+
+function seven_s_upcoming_race() {
+    return new WP_Query([
+        'post_type' => 'seven_s_event', 'posts_per_page' => 1, 'post_status' => 'publish',
+        'meta_key' => '_seven_s_date', 'orderby' => 'meta_value', 'order' => 'ASC',
+        'meta_query' => [
+            'relation' => 'AND',
+            ['key' => '_seven_s_date', 'value' => current_time('Y-m-d\TH:i'), 'compare' => '>=', 'type' => 'CHAR'],
+            ['relation' => 'OR',
+                ['key' => '_seven_s_event_status', 'compare' => 'NOT EXISTS'],
+                ['key' => '_seven_s_event_status', 'value' => ['completed', 'cancelled'], 'compare' => 'NOT IN'],
+            ],
+        ],
+    ]);
+}
